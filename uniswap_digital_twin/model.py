@@ -120,6 +120,7 @@ def p_actionDecoder(params, substep, _3, s):
                 
         for key in ['eth_sold', 'tokens_sold', 'eth_deposit', 'token_deposit', 'price_ratio']:
             if action[key] != 0:
+                print(key)
                 print(action[key])
         #print(sum(action.values()))
     elif event == 'mint':
@@ -179,6 +180,8 @@ def s_mechanismHub_UNI(_params, substep, sH, s, _input):
         return removeLiquidity_UNI(_params, substep, sH, s, _input)
     return('UNI_supply', s['UNI_supply'])
 
+def post_processing(raw):
+    return raw[['RAI_balance', 'ETH_balance']]
 
 ## Model Structure
 

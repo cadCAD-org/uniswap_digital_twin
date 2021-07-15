@@ -11,6 +11,7 @@ from Types import BacktestingData, Days
 from cadCAD_tools.execution import easy_run
 from cadCAD_tools.preparation import prepare_params, Param
 from Data import create_data
+import matplotlib.pyplot as plt
 
 def retrieve_data(output_path: str,
                   date_range: Tuple[datetime, datetime]) -> None:
@@ -24,6 +25,19 @@ def retrieve_data(output_path: str,
 def prepare(data_path: str) -> BacktestingData:
     return pd.read_csv(data_path,index_col=0)
 
+def simulation_loss(true: BacktestingData, predicted: BacktestingData) -> None:
+    loss = (((true-predicted) ** 2).sum() / len(true)) ** .5
+    print("RMSE:")
+    print(loss)
+    
+    for col in true.columns:
+        plt.plot(true[col])
+        plt.plot(predicted[col])
+        plt.ylabel("Balance")
+        plt.xlabel("Timestep")
+        plt.title(col)
+        plt.legend(['True', 'Predicted'])
+        plt.show()
 
 def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
     """
@@ -64,20 +78,15 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
                           1,
                           drop_substeps=True,
                           assign_params=False)
-    return raw_sim_df
-
-    # TODO
-    # Sim_df and test_df should only have RAI_balance and ETH_balance
-    # Need refactor
-    # sim_df = default_model.post_processing(raw_sim_df)
-
+    
+    #Post processing
+    sim_df = default_model.post_processing(raw_sim_df)
+    
     # Historical data
-    test_df = pd.DataFrame.from_dict(
-        backtesting_data.pid_states, orient='index')
+    test_df = historical_events_data[['token_balance','eth_balance']]
+    test_df.columns = ['RAI_balance', 'ETH_balance']
 
-    # Need to refactor: https://github.com/BlockScience/reflexer-digital-twin/blob/master/rai_digital_twin/backtesting.py
-    loss = simulation_loss(sim_df, test_df)
-    print(f"Backtesting loss: {loss :.2%}")
+    simulation_loss(test_df, sim_df)
 
     return (sim_df, test_df, raw_sim_df)
 
@@ -125,7 +134,6 @@ def extrapolation_cycle(base_path: str = None,
     print("2. Backtesting Model\n---")
     backtest_results = backtest_model(backtesting_data)
     
-    return backtest_results
 
 
     """
