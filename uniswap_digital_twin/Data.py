@@ -2,6 +2,8 @@ import requests
 import json
 import pandas as pd
 from tqdm import tqdm
+import numpy as np
+from datetime import datetime
 
 ######Global Params#######
 graph_url = 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2'
@@ -164,11 +166,73 @@ def process_data(data, lim_date=False):
     for col1, col2 in zip(['token_balance', 'eth_balance', 'UNI_supply'], ['token_delta', 'eth_delta', 'UNI_delta']):
         data[col1] = data[col2].cumsum()
     
-    print("TODO: ADD IN GENESIS STATE")
-    
+    return data
+
+def add_starting_state(data):
+    #Find the minimum date
+    start_date = data['timestamp'].min()
+
+    #Truncate to hour
+    start_date = datetime(start_date.year, start_date.month, start_date.day, start_date.hour)
+
+    #Add an hour ahead
+    start_date = start_date + pd.Timedelta("1h")
+
+    #Clip out anything before the start date
+    data = data[data['timestamp'] >= start_date].copy()
+
+    #Convert to unix timestamp
+    unix_ts = int((start_date - datetime(1970,1,1)).total_seconds() )
+
+    #Build query
+    query = """query{{
+      pairHourDatas (where: {{pair: "0x8ae720a71622e824f576b4a8c03031066548a3b1", hourStartUnix: {} }}){{
+        reserve0,
+        reserve1,
+        hourStartUnix
+      }}
+    }}
+    """.format(unix_ts)
+
+    #Pull the starting state
+    start_state = process_query(query, "pairHourDatas", graph_url)
+
+    #Check to make sure only one has been pulled down and it equals the unix_ts
+    assert len(start_state) == 1, "Start state length not equal to 1"
+    start_state = start_state[0]
+    assert start_state['hourStartUnix'] == unix_ts, "The timestamps do not match"
+
+    #Convert and find liquidity
+    start_state['reserve0'] = float(start_state['reserve0'])
+    start_state['reserve1'] = float(start_state['reserve1'])
+    start_state['liquidity'] = (start_state['reserve0'] * start_state['reserve1']) ** 0.5
+
+    #Increment the balances by starting state
+    data['token_balance'] += start_state['reserve0']
+    data['eth_balance'] += start_state['reserve1']
+    data['UNI_supply'] += start_state['liquidity']
+
+    #Convert start state to correct format
+    start_state = {'token_delta': 0,
+     'eth_delta': 0,
+     'UNI_delta': 0,
+     'logIndex': np.NaN,
+     'timestamp': start_date,
+     'event': np.NaN,
+     'token_balance': start_state['reserve0'],
+     'eth_balance': start_state['reserve1'],
+     'UNI_supply': start_state['liquidity']}
+
+    #Append start state
+    data = data.append(start_state, ignore_index=True)
+
+    #Sort and reset index
+    data = data.sort_values(['timestamp', 'logIndex'])
+    data = data.reset_index(drop=True)
     return data
 
 def create_data():
+    #Build queries for mint, burn, swap
     mint_query = lambda i: query_builder("mints",
                       ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
                      first=1000, skip=i, order_by="timestamp", order_direction="desc",
@@ -184,8 +248,12 @@ def create_data():
                      first=1000, skip=i, order_by="timestamp", order_direction="desc",
                              where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"})
     
+    #Pull and process data
     queries = [mint_query, burns_query, swaps_query]
     fields = ["mints", "burns", "swaps"]
     data = [pull_data(q, f) for q, f in zip(queries, fields)]
     data = process_data(data, lim_date=True)
+    
+    #Add in starting state
+    data = add_starting_state(data)
     return data
