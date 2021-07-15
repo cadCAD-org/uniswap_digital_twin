@@ -1,12 +1,16 @@
 from cadCAD_tools.types import Parameter
 from cadCAD_tools.preparation import InitialState, Param
 from Types import ETH, RAI, BacktestingData, Percentage
+from cadCAD_tools.types import InitialValue
+from cadCAD_tools.preparation import prepare_state
 
 ## Initial State
 genesis_states = {
-    'RAI_balance': InitialState(None, RAI),
-    'ETH_balance': InitialState(None, ETH)
+    'RAI_balance': InitialValue(None, RAI),
+    'ETH_balance': InitialValue(None, ETH)
 }
+
+genesis_states = prepare_state(genesis_states)
 
 ## Parameters
 sys_params = {
