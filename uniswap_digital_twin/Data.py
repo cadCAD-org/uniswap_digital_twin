@@ -172,17 +172,17 @@ def create_data():
     mint_query = lambda i: query_builder("mints",
                       ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
                      first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                             where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
+                             where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"})
     
     burns_query = lambda i: query_builder("burns",
                       ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
                      first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                             where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
+                             where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"})
     
     swaps_query = lambda i: query_builder("swaps",
                       ["timestamp", "amount0In", "amount1In", "amount0Out", "amount1Out","logIndex"],
                      first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                             where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
+                             where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"})
     
     queries = [mint_query, burns_query, swaps_query]
     fields = ["mints", "burns", "swaps"]

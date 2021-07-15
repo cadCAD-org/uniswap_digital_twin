@@ -23,7 +23,7 @@ def retrieve_data(output_path: str,
 
 
 def prepare(data_path: str) -> BacktestingData:
-    return pd.read_csv(data_path)
+    return pd.read_csv(data_path,index_col=0)
 
 
 def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
@@ -42,21 +42,23 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
 
     # Set-up initial state
     initial_state = default_model.initial_state
-    initial_state.update('RAI_balance', historical_events_data.RAI_balance.iloc[0])
-    initial_state.update('ETH_balance', historical_events_data.RAI_balance.iloc[0])
+    
+    
+    initial_state.update({'RAI_balance': historical_events_data.loc[0, "token_balance"]})
+    initial_state.update({'ETH_balance': historical_events_data.loc[0, "eth_balance"]})
 
     # Set-up params
     params = default_model.parameters
-    params.update('uniswap_events', historical_events_data)
+    params.update({'uniswap_events': historical_events_data})
 
-    timesteps = len(historical_events_data.heights) - 1
+    timesteps = len(historical_events_data) - 1
 
     params = prepare_params(params)
 
     # Run cadCAD model
     raw_sim_df = easy_run(initial_state,
                           params,
-                          default_model.timestep_block,
+                          default_model.PSUBs,
                           timesteps,
                           1,
                           drop_substeps=True,

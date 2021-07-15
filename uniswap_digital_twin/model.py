@@ -3,6 +3,8 @@ from cadCAD_tools.preparation import InitialState, Param
 from Types import ETH, RAI, BacktestingData, Percentage
 from cadCAD_tools.types import InitialValue
 from cadCAD_tools.preparation import prepare_state
+from policy_aux import *
+from suf_aux import *
 
 ## Initial State
 genesis_states = {
@@ -10,10 +12,10 @@ genesis_states = {
     'ETH_balance': InitialValue(None, ETH)
 }
 
-genesis_states = prepare_state(genesis_states)
+initial_state = prepare_state(genesis_states)
 
 ## Parameters
-sys_params = {
+parameters = {
     # Mechanism parameters
     'fee_percentage': Param(0.003, Percentage),
 
@@ -136,6 +138,41 @@ def p_actionDecoder(params, substep, _3, s):
             action['UNI_pct'] = UNI_delta / UNI_supply
     del uniswap_events
     return action
+
+# SUFs
+
+def s_mechanismHub_RAI(_params, substep, sH, s, _input):
+    action = _input['action_id']
+    if action == 'tokenPurchase':
+        return ethToToken_RAI(_params, substep, sH, s, _input)
+    elif action == 'ethPurchase':
+        return tokenToEth_RAI(_params, substep, sH, s, _input)
+    elif action == 'mint':
+        return mint_RAI(_params, substep, sH, s, _input)
+    elif action == 'burn':
+        return removeLiquidity_RAI(_params, substep, sH, s, _input)
+    return('RAI_balance', s['RAI_balance'])
+    
+def s_mechanismHub_ETH(_params, substep, sH, s, _input):
+    action = _input['action_id']
+    if action == 'tokenPurchase':
+        return ethToToken_ETH(_params, substep, sH, s, _input)
+    elif action == 'ethPurchase':
+        return tokenToEth_ETH(_params, substep, sH, s, _input)
+    elif action == 'mint':
+        return mint_ETH(_params, substep, sH, s, _input)
+    elif action == 'burn':
+        return removeLiquidity_ETH(_params, substep, sH, s, _input)
+    return('ETH_balance', s['ETH_balance'])
+
+def s_mechanismHub_UNI(_params, substep, sH, s, _input):
+    action = _input['action_id']
+    if action == 'mint':
+        return mint_UNI(_params, substep, sH, s, _input)
+    elif action == 'burn':
+        return removeLiquidity_UNI(_params, substep, sH, s, _input)
+    return('UNI_supply', s['UNI_supply'])
+
 
 ## Model Structure
 
