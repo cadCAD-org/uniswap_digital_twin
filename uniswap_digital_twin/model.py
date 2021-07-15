@@ -21,7 +21,7 @@ parameters = {
 
     # Behavioural parameters
     # TODO: check if really needed
-    'fix_cost': [-1], # -1 to deactivate
+    'fix_cost': Param(0.003, int), # -1 to deactivate
     'retail_precision': Param(3, int),
     'retail_tolerance': [0.0005],
 

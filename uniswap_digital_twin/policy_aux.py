@@ -29,16 +29,16 @@ def reverse_event(event):
     return new_event
 
 def get_output_amount(delta_I, I_t, O_t, _params):
-    fee_numerator = _params['fee_numerator']
-    fee_denominator = _params['fee_denominator']
+    fee_numerator = 1-_params['fee_percentage']
+    fee_denominator = 1
     delta_I_with_fee = delta_I * fee_numerator
     numerator = delta_I_with_fee * O_t                        
     denominator = (I_t * fee_denominator) + delta_I_with_fee 
     return int(numerator // denominator)                      
 
 def get_input_amount(delta_O, I_t, O_t, _params):
-    fee_numerator = _params['fee_numerator']
-    fee_denominator = _params['fee_denominator']
+    fee_numerator = 1-_params['fee_percentage']
+    fee_denominator = 1
     numerator = I_t * delta_O * fee_denominator
     denominator = (O_t - delta_O) * fee_numerator
     return int(numerator // denominator) + 1
@@ -50,8 +50,9 @@ def classifier(delta_I, delta_O, retail_precision):
       return "Arb"
 
 def get_delta_I(P, I_t, O_t, _params):
-    a = _params['fee_numerator']
-    b = _params['fee_denominator']
+    a = 1-_params['fee_percentage']
+    b = 1
+
     delta_I = (
         (-(I_t*b + I_t*a)) + sqrt(
             ((I_t*b - I_t*a)**2) + (4*P*O_t*I_t*a*b)

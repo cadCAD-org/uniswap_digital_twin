@@ -128,8 +128,8 @@ def process_amount(df):
     elif df['event'].iloc[0] == 'burns':
         df[['amount0', 'amount1', 'liquidity']] *= -1
     elif df['event'].iloc[0] == 'swaps':
-        df['amount0'] = df['amount0Out'] - df['amount0In']
-        df['amount1'] = df['amount1Out'] - df['amount1In']
+        df['amount0'] = df['amount0In'] - df['amount0Out']
+        df['amount1'] = df['amount1In'] - df['amount1Out']
         df['liquidity'] = 0
         df.drop(columns=['amount0Out', 'amount0In', 'amount1Out', 'amount1In'], inplace=True)
         
@@ -174,15 +174,16 @@ def add_starting_state(data):
 
     #Truncate to hour
     start_date = datetime(start_date.year, start_date.month, start_date.day, start_date.hour)
-
-    #Add an hour ahead
+    
+    #Convert to unix timestamp
+    unix_ts = int((start_date - datetime(1970,1,1)).total_seconds() )
+    
+    #Add an hour ahead to reflect that data is end of the hour marked
     start_date = start_date + pd.Timedelta("1h")
 
     #Clip out anything before the start date
     data = data[data['timestamp'] >= start_date].copy()
-
-    #Convert to unix timestamp
-    unix_ts = int((start_date - datetime(1970,1,1)).total_seconds() )
+    
 
     #Build query
     query = """query{{
@@ -207,15 +208,10 @@ def add_starting_state(data):
     start_state['reserve1'] = float(start_state['reserve1'])
     start_state['liquidity'] = (start_state['reserve0'] * start_state['reserve1']) ** 0.5
 
-    #Increment the balances by starting state
-    data['token_balance'] += start_state['reserve0']
-    data['eth_balance'] += start_state['reserve1']
-    data['UNI_supply'] += start_state['liquidity']
-
     #Convert start state to correct format
-    start_state = {'token_delta': 0,
-     'eth_delta': 0,
-     'UNI_delta': 0,
+    start_state = {'token_delta': start_state['reserve0'],
+     'eth_delta': start_state['reserve1'],
+     'UNI_delta': start_state['liquidity'],
      'logIndex': np.NaN,
      'timestamp': start_date,
      'event': np.NaN,
@@ -229,6 +225,11 @@ def add_starting_state(data):
     #Sort and reset index
     data = data.sort_values(['timestamp', 'logIndex'])
     data = data.reset_index(drop=True)
+    
+    #Find balances over time
+    for col1, col2 in zip(['token_balance', 'eth_balance', 'UNI_supply'], ['token_delta', 'eth_delta', 'UNI_delta']):
+        data[col1] = data[col2].cumsum()
+    
     return data
 
 def create_data():
