@@ -23,7 +23,7 @@ parameters = {
     # TODO: check if really needed
     'fix_cost': Param(0.003, int), # -1 to deactivate
     'retail_precision': Param(3, int),
-    'retail_tolerance': [0.0005],
+    'retail_tolerance': Param(0.0005, float),
 
     # If is None, then the model will run on Extrapolation mode
     # Else, it will run on backtesting mode
@@ -80,11 +80,12 @@ def p_actionDecoder(params, substep, _3, s):
     event = uniswap_events.iloc[t]['event']
     action['action_id'] = event
 
+
     # Swap Event
     if event in ['tokenPurchase', 'ethPurchase']:
         # action_key is either `eth_sold` or `token_sold`
         I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = get_parameters(uniswap_events, event, s, t)
-        
+
         # Classify actions based on trading heuristics
         # N/A case
         if params['retail_precision'] == -1:
@@ -116,6 +117,11 @@ def p_actionDecoder(params, substep, _3, s):
                 if(unprofitable_transaction(I_t, O_t, delta_I, delta_O, action_key, params)):
                     delta_I = 0
                 action[action_key] = delta_I
+                
+        for key in ['eth_sold', 'tokens_sold', 'eth_deposit', 'token_deposit', 'price_ratio']:
+            if action[key] != 0:
+                print(action[key])
+        #print(sum(action.values()))
     elif event == 'mint':
         delta_I = uniswap_events['eth_delta'][t]
         delta_O = uniswap_events['token_delta'][t]

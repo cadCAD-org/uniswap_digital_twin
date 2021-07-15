@@ -44,7 +44,7 @@ def get_input_amount(delta_O, I_t, O_t, _params):
     return int(numerator // denominator) + 1
 
 def classifier(delta_I, delta_O, retail_precision):
-    if (delta_I / (10 ** (18-retail_precision))).is_integer() or (delta_O / (10 ** (18-retail_precision))).is_integer() :
+    if (delta_I * 10 ** retail_precision).is_integer() or (delta_O * 10 ** retail_precision).is_integer() :
       return "Conv"
     else:
       return "Arb"

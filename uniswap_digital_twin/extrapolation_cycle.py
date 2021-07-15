@@ -64,7 +64,7 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
                           1,
                           drop_substeps=True,
                           assign_params=False)
-
+    return raw_sim_df
 
     # TODO
     # Sim_df and test_df should only have RAI_balance and ETH_balance
@@ -124,6 +124,8 @@ def extrapolation_cycle(base_path: str = None,
 
     print("2. Backtesting Model\n---")
     backtest_results = backtest_model(backtesting_data)
+    
+    return backtest_results
 
 
     """
