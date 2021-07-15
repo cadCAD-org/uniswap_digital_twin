@@ -7,10 +7,10 @@ from typing import List, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import pandas as pd
-from .types import BacktestingData
+from Types import BacktestingData, Days
 from cadCAD_tools.execution import easy_run
 from cadCAD_tools.preparation import prepare_params
-
+from Data import create_data
 
 
 def retrieve_data(output_path: str,
@@ -18,8 +18,8 @@ def retrieve_data(output_path: str,
     """
     Download data and store it to a *.csv.xz file.
     """
-    # TODO
-    pass
+    df = create_data()
+    df.to_csv(output_path, compression='gzip')
 
 
 def prepare(data_path: str) -> BacktestingData:

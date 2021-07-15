@@ -168,25 +168,24 @@ def process_data(data, lim_date=False):
     
     return data
 
-
-
-
-mint_query = lambda i: query_builder("mints",
-                  ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
-                 first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                         where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
-
-burns_query = lambda i: query_builder("burns",
-                  ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
-                 first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                         where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
-
-swaps_query = lambda i: query_builder("swaps",
-                  ["timestamp", "amount0In", "amount1In", "amount0Out", "amount1Out","logIndex"],
-                 first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                         where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
-
-queries = [mint_query, burns_query, swaps_query]
-fields = ["mints", "burns", "swaps"]
-data = [pull_data(q, f) for q, f in zip(queries, fields)]
-data = process_data(data)
+def create_data():
+    mint_query = lambda i: query_builder("mints",
+                      ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
+                     first=1000, skip=i, order_by="timestamp", order_direction="desc",
+                             where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
+    
+    burns_query = lambda i: query_builder("burns",
+                      ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
+                     first=1000, skip=i, order_by="timestamp", order_direction="desc",
+                             where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
+    
+    swaps_query = lambda i: query_builder("swaps",
+                      ["timestamp", "amount0In", "amount1In", "amount0Out", "amount1Out","logIndex"],
+                     first=1000, skip=i, order_by="timestamp", order_direction="desc",
+                             where_clause={"pair": "0xa478c2975ab1ea89e8196811f51a7b7ade33eb11"})
+    
+    queries = [mint_query, burns_query, swaps_query]
+    fields = ["mints", "burns", "swaps"]
+    data = [pull_data(q, f) for q, f in zip(queries, fields)]
+    data = process_data(data, lim_date=True)
+    return data

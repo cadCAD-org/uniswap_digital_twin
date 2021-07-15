@@ -1,7 +1,6 @@
 from cadCAD_tools.types import Parameter
-from uniswap_digital_twin.types import ETH
 from cadCAD_tools.preparation import InitialState, Param
-from .types import RAI, BacktestingData, Percentage
+from Types import ETH, RAI, BacktestingData, Percentage
 
 ## Initial State
 genesis_states = {
