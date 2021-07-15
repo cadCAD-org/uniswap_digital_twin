@@ -9,9 +9,8 @@ from enum import Enum
 import pandas as pd
 from Types import BacktestingData, Days
 from cadCAD_tools.execution import easy_run
-from cadCAD_tools.preparation import prepare_params
+from cadCAD_tools.preparation import prepare_params, Param
 from Data import create_data
-
 
 def retrieve_data(output_path: str,
                   date_range: Tuple[datetime, datetime]) -> None:
@@ -49,11 +48,13 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
 
     # Set-up params
     params = default_model.parameters
-    params.update({'uniswap_events': historical_events_data})
-
+    
+    params.update({'uniswap_events': Param(historical_events_data, BacktestingData)})
+    print(params)
     timesteps = len(historical_events_data) - 1
 
     params = prepare_params(params)
+    print(params)
 
     # Run cadCAD model
     raw_sim_df = easy_run(initial_state,
