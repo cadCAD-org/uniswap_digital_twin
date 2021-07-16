@@ -21,6 +21,64 @@ def get_parameters(uniswap_events, event, s, t):
     
     return I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key
 
+def agent_action(signal, s):
+    #Find current ratio
+    current_ratio = s['RAI_balance'] / s['ETH_balance']
+    eth_res = s['ETH_balance']
+    rai_res = s['RAI_balance']
+    
+    
+    #Find the side of the trade
+    if signal < current_ratio:
+        action_key = "eth_sold"
+    else:
+        action_key = "tokens_sold"
+    
+    #Constant for equations
+    C = rai_res * eth_res
+    
+    #Find the maximum shift that the trade should be able to sap up all arbitrage opportunities
+    max_shift = abs(rai_res / eth_res - signal)
+    
+    #Start with a constant choice of 10 eth trade
+    eth_size = 10.0
+    
+    #Decide on sign of eth
+    if action_key == "eth_sold":
+        eth_delta = eth_size
+    else:
+        eth_delta = -eth_size
+    
+    #Compute the RAI delta to hold C constant
+    rai_delta = C / (eth_res + eth_delta) - rai_res
+    
+    #Caclulate the implied shift in ratio
+    implied_shift = abs((rai_res + rai_delta)/ (eth_res + eth_delta) - rai_res / eth_res)
+    
+    #While the trade is too large, cut trade size in half
+    while implied_shift > max_shift:
+        
+        #Cut trade in half
+        eth_delta = eth_delta/2
+        rai_delta = C / (eth_res + eth_delta) - rai_res
+        implied_shift = abs((rai_res + rai_delta)/ (eth_res + eth_delta) - rai_res / eth_res)
+
+    if action_key == "eth_sold":
+        I_t = s['ETH_balance']
+        O_t = s['RAI_balance']
+        I_t1 = s['ETH_balance']
+        O_t1 = s['RAI_balance']
+        delta_I = eth_delta
+        delta_O = rai_delta
+    else:
+        I_t = s['RAI_balance']
+        O_t = s['ETH_balance']
+        I_t1 = s['RAI_balance']
+        O_t1 = s['ETH_balance']
+        delta_I = rai_delta
+        delta_O = eth_delta
+    return I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key
+
 def reverse_event(event):
     if(event == "tokenPurchase"):
         new_event = 'ethPurchase'

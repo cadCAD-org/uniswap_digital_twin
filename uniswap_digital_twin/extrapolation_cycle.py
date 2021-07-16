@@ -275,12 +275,19 @@ def extrapolation_cycle(base_path: str = None,
     
     print("5. Extrapolating Future Data\n---")
     N_extrapolation_samples = extrapolation_samples
-    extrapolation_df = extrapolate_data(backtesting_data, extrapolated_signals, N_t, np.exp(initial_ratio)-1)
-    """
+    extrapolation_df = extrapolate_data(backtesting_data, extrapolated_signals[0], N_t, np.exp(initial_ratio)-1)
+    
+    
+    print("Test Code for Arb Traders Convergence:")
+    pd.DataFrame(extrapolated_signals[0]).plot(kind='line')
+    (extrapolation_df['RAI_balance']/extrapolation_df['ETH_balance']).plot(kind='line')
+    plt.show()
+    
+    
     extrapolation_df.to_csv(data_path / f'{runtime}-extrapolation.csv.gz',
                             compression='gzip',
                             index=False)
-
+    """
     print("6. Exporting results\n---")
     if generate_reports == True:
         path = str((data_path / f'{runtime}-').expanduser())
@@ -298,9 +305,9 @@ def extrapolation_cycle(base_path: str = None,
         export_cmd = f"jupyter nbconvert --to html '{output_nb_path}'"
         os.system(export_cmd)
         os.system(f"rm '{output_nb_path}'")
+    """
     t2 = time()
     print(f"7. Done! {t2 - t1 :.2f}s\n---")
 
     output = (backtest_results, extrapolation_df, stochastic_params)
     return output
-    """

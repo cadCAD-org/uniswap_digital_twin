@@ -59,7 +59,7 @@ def p_actionDecoder(params, substep, _3, s):
         UNI_supply (numeric)
     """
     uniswap_events = params['uniswap_events']
-    print(params["backtest_mode"])
+
     
     prev_timestep = s['timestep']
     if substep > 1:
@@ -67,7 +67,10 @@ def p_actionDecoder(params, substep, _3, s):
         
     # skip the first two events, as they are already accounted for 
     # in the initial conditions of the system
-    t = prev_timestep + 1 
+    if params["backtest_mode"]:
+        t = prev_timestep + 1 
+    else:
+        t = prev_timestep
     
     action = {
         'eth_sold': 0,
@@ -82,14 +85,26 @@ def p_actionDecoder(params, substep, _3, s):
     }
 
     #Event variables
-    event = uniswap_events.iloc[t]['event']
-    action['action_id'] = event
+    if params["backtest_mode"]:
+        event = uniswap_events.iloc[t]['event']
+        action['action_id'] = event
+    else:
+        signal = params['extrapolated_signals'][t]['ratio']
+        
+        
+        I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = agent_action(signal, s)
+        if action_key == "eth_sold":
+            event = 'tokenPurchase'
+        else:
+            event = 'ethPurchase'
+        action['action_id'] = event
 
 
     # Swap Event
     if event in ['tokenPurchase', 'ethPurchase']:
         # action_key is either `eth_sold` or `token_sold`
-        I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = get_parameters(uniswap_events, event, s, t)
+        if params["backtest_mode"]:
+            I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = get_parameters(uniswap_events, event, s, t)
 
         # Classify actions based on trading heuristics
         # N/A case
@@ -108,7 +123,8 @@ def p_actionDecoder(params, substep, _3, s):
             P = I_t1 / O_t1
             actual_P = I_t / O_t
             if(actual_P > P):
-                I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = get_parameters(uniswap_events, reverse_event(event), s, t)
+                if params["backtest_mode"]:
+                    I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = get_parameters(uniswap_events, reverse_event(event), s, t)
                 P = I_t1 / O_t1
                 actual_P = I_t / O_t
                 delta_I = get_delta_I(P, I_t, O_t, params)
