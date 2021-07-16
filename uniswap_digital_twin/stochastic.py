@@ -88,3 +88,15 @@ def generate_eth_samples(fit_params: FitParams,
             xhat += (initial_value - xhat[0])
 
         yield xhat
+        
+        
+def generate_ratio_samples(fit_params: FitParams,
+                         timesteps: int,
+                         samples: int,
+                         initial_value: USD_per_ETH = None) -> Iterable[np.ndarray]:
+    for run in range(0, samples):
+        np.random.seed(seed=run)
+        mu, std = fit_params.shape, fit_params.scale
+        deltas = np.random.normal(mu, std, timesteps)
+        ratios = np.exp(initial_value + deltas.cumsum()) - 1
+        yield ratios

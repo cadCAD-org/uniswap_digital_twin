@@ -118,10 +118,10 @@ def p_actionDecoder(params, substep, _3, s):
                     delta_I = 0
                 action[action_key] = delta_I
                 
-        for key in ['eth_sold', 'tokens_sold', 'eth_deposit', 'token_deposit', 'price_ratio']:
+        """for key in ['eth_sold', 'tokens_sold', 'eth_deposit', 'token_deposit', 'price_ratio']:
             if action[key] != 0:
                 print(key)
-                print(action[key])
+                print(action[key])"""
         #print(sum(action.values()))
     elif event == 'mint':
         delta_I = uniswap_events['eth_delta'][t]

@@ -12,7 +12,7 @@ from cadCAD_tools.execution import easy_run
 from cadCAD_tools.preparation import prepare_params, Param
 from Data import create_data
 import matplotlib.pyplot as plt
-from stochastic import FitParams, generate_eth_samples
+from stochastic import FitParams, generate_eth_samples, generate_ratio_samples
 
 def retrieve_data(output_path: str,
                   date_range: Tuple[datetime, datetime]) -> None:
@@ -45,7 +45,7 @@ def stochastic_fit(input_data: object) -> FitParams:
     Acquire parameters for the stochastic input signals.
     """
 
-    params = FitParams(1, 1)
+    params = FitParams(0.000036906289210966747, 0.014081285145600045)
     return params
 
 def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
@@ -99,13 +99,11 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
 
     return (sim_df, test_df, raw_sim_df)
 
-def extrapolate_signals(signal_params: FitParams,
+"""def extrapolate_signals(signal_params: FitParams,
                         timesteps: int,
                         initial_price: USD_per_ETH,
                         N_samples=3) -> tuple[ExogenousData, ...]:
-    """
-    Generate input signals from given parameters.
-    """
+
     eth_series_list = generate_eth_samples(signal_params,
                                            timesteps,
                                            N_samples,
@@ -113,6 +111,25 @@ def extrapolate_signals(signal_params: FitParams,
 
     # Clean-up data for injecting on the cadCAD model
     exogenous_data_sweep = tuple(tuple({'eth_price': el}
+                                       for el
+                                       in eth_series)
+                                 for eth_series
+                                 in eth_series_list)
+
+    return exogenous_data_sweep"""
+
+def extrapolate_signals(signal_params: FitParams,
+                        timesteps: int,
+                        initial_price: USD_per_ETH,
+                        N_samples=3) -> tuple[ExogenousData, ...]:
+
+    eth_series_list = generate_ratio_samples(signal_params,
+                                           timesteps,
+                                           N_samples,
+                                           initial_price)
+
+    # Clean-up data for injecting on the cadCAD model
+    exogenous_data_sweep = tuple(tuple({'ratio': el}
                                        for el
                                        in eth_series)
                                  for eth_series
@@ -200,16 +217,23 @@ def extrapolation_cycle(base_path: str = None,
     N_t = extrapolation_timesteps
     N_price_samples = price_samples
     
-    print("USING DUMMY INITIAL PRICE")
+    print("USING DUMMY INITIAL RATIO")
     #initial_price = backtest_results[0].iloc[-1].eth_price
-    initial_price = 1904.46
+    initial_ratio = 6.455903839554217
     
     
+    
+    #extrapolated_signals = extrapolate_signals(stochastic_params,
+    #                                           N_t + 10,
+    #                                           initial_price,
+    #                                           N_price_samples)
     
     extrapolated_signals = extrapolate_signals(stochastic_params,
                                                N_t + 10,
-                                               initial_price,
+                                               initial_ratio,
                                                N_price_samples)
+    print(extrapolated_signals)
+
     """
     print("5. Extrapolating Future Data\n---")
     N_extrapolation_samples = extrapolation_samples
