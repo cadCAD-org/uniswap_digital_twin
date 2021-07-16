@@ -7,11 +7,12 @@ from typing import List, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import pandas as pd
-from Types import BacktestingData, Days
+from Types import BacktestingData, Days, USD_per_ETH, ExogenousData
 from cadCAD_tools.execution import easy_run
 from cadCAD_tools.preparation import prepare_params, Param
 from Data import create_data
 import matplotlib.pyplot as plt
+from stochastic import FitParams, generate_eth_samples
 
 def retrieve_data(output_path: str,
                   date_range: Tuple[datetime, datetime]) -> None:
@@ -38,6 +39,14 @@ def simulation_loss(true: BacktestingData, predicted: BacktestingData) -> None:
         plt.title(col)
         plt.legend(['True', 'Predicted'])
         plt.show()
+        
+def stochastic_fit(input_data: object) -> FitParams:
+    """
+    Acquire parameters for the stochastic input signals.
+    """
+
+    params = FitParams(1, 1)
+    return params
 
 def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
     """
@@ -90,6 +99,27 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
 
     return (sim_df, test_df, raw_sim_df)
 
+def extrapolate_signals(signal_params: FitParams,
+                        timesteps: int,
+                        initial_price: USD_per_ETH,
+                        N_samples=3) -> tuple[ExogenousData, ...]:
+    """
+    Generate input signals from given parameters.
+    """
+    eth_series_list = generate_eth_samples(signal_params,
+                                           timesteps,
+                                           N_samples,
+                                           initial_price)
+
+    # Clean-up data for injecting on the cadCAD model
+    exogenous_data_sweep = tuple(tuple({'eth_price': el}
+                                       for el
+                                       in eth_series)
+                                 for eth_series
+                                 in eth_series_list)
+
+    return exogenous_data_sweep
+
 def extrapolation_cycle(base_path: str = None,
                         historical_interval: Days = 28,
                         historical_lag: Days = 0,
@@ -136,7 +166,7 @@ def extrapolation_cycle(base_path: str = None,
     
 
 
-    """
+    
 
     backtest_results[0].to_csv(data_path / f'{runtime}-backtesting.csv.gz',
                                compression='gzip',
@@ -145,7 +175,7 @@ def extrapolation_cycle(base_path: str = None,
     backtest_results[1].to_csv(data_path / f'{runtime}-historical.csv.gz',
                                compression='gzip',
                                index=False)
-
+    """
     timestamps = sorted([el['timestamp']
                          for (timestep, el)
                          in backtesting_data.exogenous_data.items()])
@@ -156,19 +186,31 @@ def extrapolation_cycle(base_path: str = None,
 
     with open(data_path.expanduser() / f"{runtime}-meta.json", 'w') as fid:
         dump(metadata, fid)
-
+        
+    """
+    
     print("3. Fitting Stochastic Processes\n---")
-    stochastic_params = stochastic_fit(backtesting_data.exogenous_data)
-
+    #stochastic_params = stochastic_fit(backtesting_data.exogenous_data)
+    print("FILLING WITH DUMMY FUNCTION FOR NOW")
+    stochastic_params = stochastic_fit(None)
+    
+    
+    
     print("4. Extrapolating Exogenous Signals\n---")
     N_t = extrapolation_timesteps
     N_price_samples = price_samples
-    initial_price = backtest_results[0].iloc[-1].eth_price
+    
+    print("USING DUMMY INITIAL PRICE")
+    #initial_price = backtest_results[0].iloc[-1].eth_price
+    initial_price = 1904.46
+    
+    
+    
     extrapolated_signals = extrapolate_signals(stochastic_params,
                                                N_t + 10,
                                                initial_price,
                                                N_price_samples)
-
+    """
     print("5. Extrapolating Future Data\n---")
     N_extrapolation_samples = extrapolation_samples
     extrapolation_df = extrapolate_data(extrapolated_signals,
