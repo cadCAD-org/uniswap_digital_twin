@@ -13,6 +13,7 @@ from cadCAD_tools.preparation import prepare_params, Param
 from Data import create_data
 import matplotlib.pyplot as plt
 from stochastic import FitParams, generate_eth_samples, generate_ratio_samples
+import numpy as np
 
 def retrieve_data(output_path: str,
                   date_range: Tuple[datetime, datetime]) -> None:
@@ -73,11 +74,11 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
     params = default_model.parameters
     
     params.update({'uniswap_events': Param(historical_events_data, BacktestingData)})
-    print(params)
+
     timesteps = len(historical_events_data) - 1
 
     params = prepare_params(params)
-    print(params)
+
 
     # Run cadCAD model
     raw_sim_df = easy_run(initial_state,
@@ -98,6 +99,43 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
     simulation_loss(test_df, sim_df)
 
     return (sim_df, test_df, raw_sim_df)
+
+
+
+def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_ratio)  -> pd.DataFrame:
+    # HACK
+    import model as default_model
+
+    # Set-up initial state
+    initial_state = default_model.initial_state
+    
+    
+    initial_state.update({'RAI_balance': backtesting_data["token_balance"].iloc[-1]})
+    initial_state.update({'ETH_balance': backtesting_data["eth_balance"].iloc[-1]})
+    
+    
+
+    # Set-up params
+    params = default_model.parameters
+    params.update({'uniswap_events': Param(None, BacktestingData)})
+    params.update({'extrapolated_signals': Param(extrapolated_signals, np.array)})
+    params.update({'backtest_mode':Param(False, bool)})
+
+    params = prepare_params(params)
+
+
+    # Run cadCAD model
+    raw_sim_df = easy_run(initial_state,
+                          params,
+                          default_model.PSUBs,
+                          timesteps,
+                          1,
+                          drop_substeps=True,
+                          assign_params=False)
+    
+    #Post processing
+    sim_df = default_model.post_processing(raw_sim_df)
+    return sim_df
 
 """def extrapolate_signals(signal_params: FitParams,
                         timesteps: int,
@@ -232,17 +270,13 @@ def extrapolation_cycle(base_path: str = None,
                                                N_t + 10,
                                                initial_ratio,
                                                N_price_samples)
-    print(extrapolated_signals)
 
-    """
+
+    
     print("5. Extrapolating Future Data\n---")
     N_extrapolation_samples = extrapolation_samples
-    extrapolation_df = extrapolate_data(extrapolated_signals,
-                                        backtest_results,
-                                        governance_events,
-                                        N_t,
-                                        N_extrapolation_samples)
-
+    extrapolation_df = extrapolate_data(backtesting_data, extrapolated_signals, N_t, np.exp(initial_ratio)-1)
+    """
     extrapolation_df.to_csv(data_path / f'{runtime}-extrapolation.csv.gz',
                             compression='gzip',
                             index=False)

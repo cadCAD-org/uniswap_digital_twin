@@ -5,11 +5,13 @@ from cadCAD_tools.types import InitialValue
 from cadCAD_tools.preparation import prepare_state
 from policy_aux import *
 from suf_aux import *
+import numpy as np
 
 ## Initial State
 genesis_states = {
     'RAI_balance': InitialValue(None, RAI),
-    'ETH_balance': InitialValue(None, ETH)
+    'ETH_balance': InitialValue(None, ETH),
+    'Ratio': InitialValue(None, Percentage)
 }
 
 initial_state = prepare_state(genesis_states)
@@ -27,7 +29,9 @@ parameters = {
 
     # If is None, then the model will run on Extrapolation mode
     # Else, it will run on backtesting mode
-    'uniswap_events': Param(None, BacktestingData)
+    'uniswap_events': Param(None, BacktestingData),
+    'backtest_mode': Param(True, bool),
+    'extrapolated_signals': Param(None, np.array)
 }
 
 ## Model Logic
@@ -55,6 +59,7 @@ def p_actionDecoder(params, substep, _3, s):
         UNI_supply (numeric)
     """
     uniswap_events = params['uniswap_events']
+    print(params["backtest_mode"])
     
     prev_timestep = s['timestep']
     if substep > 1:
