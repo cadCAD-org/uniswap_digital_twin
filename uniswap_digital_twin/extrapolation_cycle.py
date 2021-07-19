@@ -14,6 +14,8 @@ from Data import create_data
 import matplotlib.pyplot as plt
 from stochastic import FitParams, generate_eth_samples, generate_ratio_samples
 import numpy as np
+import papermill as pm
+from json import dump
 
 def retrieve_data(output_path: str,
                   date_range: Tuple[datetime, datetime]) -> None:
@@ -230,10 +232,8 @@ def extrapolation_cycle(base_path: str = None,
     backtest_results[1].to_csv(data_path / f'{runtime}-historical.csv.gz',
                                compression='gzip',
                                index=False)
-    """
-    timestamps = sorted([el['timestamp']
-                         for (timestep, el)
-                         in backtesting_data.exogenous_data.items()])
+    print(backtesting_data.columns)
+    timestamps = (backtesting_data['timestamp'].min(), backtesting_data['timestamp'].max())
 
     metadata = {'createdAt': str(runtime),
                 'initial_backtesting_timestamp': str(timestamps[0]),
@@ -242,7 +242,7 @@ def extrapolation_cycle(base_path: str = None,
     with open(data_path.expanduser() / f"{runtime}-meta.json", 'w') as fid:
         dump(metadata, fid)
         
-    """
+    
     
     print("3. Fitting Stochastic Processes\n---")
     #stochastic_params = stochastic_fit(backtesting_data.exogenous_data)
@@ -287,12 +287,12 @@ def extrapolation_cycle(base_path: str = None,
     extrapolation_df.to_csv(data_path / f'{runtime}-extrapolation.csv.gz',
                             compression='gzip',
                             index=False)
-    """
+
     print("6. Exporting results\n---")
     if generate_reports == True:
         path = str((data_path / f'{runtime}-').expanduser())
         input_nb_path = (
-            working_path / 'rai_digital_twin/templates/extrapolation.ipynb').expanduser()
+            working_path / 'templates/extrapolation.ipynb').expanduser()
         output_nb_path = (
             working_path / f'reports/{runtime}-extrapolation.ipynb').expanduser()
         output_html_path = (
@@ -305,7 +305,7 @@ def extrapolation_cycle(base_path: str = None,
         export_cmd = f"jupyter nbconvert --to html '{output_nb_path}'"
         os.system(export_cmd)
         os.system(f"rm '{output_nb_path}'")
-    """
+    
     t2 = time()
     print(f"7. Done! {t2 - t1 :.2f}s\n---")
 
