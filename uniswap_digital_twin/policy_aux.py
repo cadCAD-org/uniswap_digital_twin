@@ -37,51 +37,86 @@ def agent_action(signal, s, params):
     #Constant for equations
     C = rai_res * eth_res
     
-    #Find the maximum shift that the trade should be able to sap up all arbitrage opportunities
-    max_shift = abs(rai_res / eth_res - signal)
-    
-    #Start with a constant choice of eth trade
     if params['agent_type'] == "Arb1":
-        eth_size = 10.0
+        eth_size = 20.0
+        
+        #Find the maximum shift that the trade should be able to sap up all arbitrage opportunities
+        max_shift = abs(rai_res / eth_res - signal)
+        
+        #Start with a constant choice of eth trade
+        
+        
+        
+        #Decide on sign of eth
+        if action_key == "eth_sold":
+            eth_delta = eth_size
+        else:
+            eth_delta = -eth_size
+        
+        #Compute the RAI delta to hold C constant
+        rai_delta = C / (eth_res + eth_delta) - rai_res
+        
+        #Caclulate the implied shift in ratio
+        implied_shift = abs((rai_res + rai_delta)/ (eth_res + eth_delta) - rai_res / eth_res)
+        
+        #While the trade is too large, cut trade size in half
+        while implied_shift > max_shift:
+            
+            #Cut trade in half
+            eth_delta = eth_delta/2
+            rai_delta = C / (eth_res + eth_delta) - rai_res
+            implied_shift = abs((rai_res + rai_delta)/ (eth_res + eth_delta) - rai_res / eth_res)
+    
+        if action_key == "eth_sold":
+            I_t = s['ETH_balance']
+            O_t = s['RAI_balance']
+            I_t1 = s['ETH_balance']
+            O_t1 = s['RAI_balance']
+            delta_I = eth_delta
+            delta_O = rai_delta
+        else:
+            I_t = s['RAI_balance']
+            O_t = s['ETH_balance']
+            I_t1 = s['RAI_balance']
+            O_t1 = s['ETH_balance']
+            delta_I = rai_delta
+            delta_O = eth_delta
     elif params['agent_type'] == "Arb2":
-        eth_size = 100.0
+        #Taken from Interacting AMM code
+        #Hack for workshop, assumes linear trade-off, reality is there is curvature 
+        reserve_1 = eth_res
+        reserve_2 = rai_res
+        amm_price = reserve_2 / reserve_1
+        price_error = amm_price + signal
+        optimal_value = (reserve_1 * signal - reserve_2) / price_error
+        eth_size = round(abs(optimal_value) * .2, 1)
+        
+        
+        #Decide on sign of eth
+        if action_key == "eth_sold":
+            eth_delta = eth_size
+        else:
+            eth_delta = -eth_size
+        #Compute the RAI delta to hold C constant
+        rai_delta = C / (eth_res + eth_delta) - rai_res
+        
+        if action_key == "eth_sold":
+            I_t = s['ETH_balance']
+            O_t = s['RAI_balance']
+            I_t1 = s['ETH_balance']
+            O_t1 = s['RAI_balance']
+            delta_I = eth_delta
+            delta_O = rai_delta
+        else:
+            I_t = s['RAI_balance']
+            O_t = s['ETH_balance']
+            I_t1 = s['RAI_balance']
+            O_t1 = s['ETH_balance']
+            delta_I = rai_delta
+            delta_O = eth_delta
+        
     else:
         assert False
-    
-    #Decide on sign of eth
-    if action_key == "eth_sold":
-        eth_delta = eth_size
-    else:
-        eth_delta = -eth_size
-    
-    #Compute the RAI delta to hold C constant
-    rai_delta = C / (eth_res + eth_delta) - rai_res
-    
-    #Caclulate the implied shift in ratio
-    implied_shift = abs((rai_res + rai_delta)/ (eth_res + eth_delta) - rai_res / eth_res)
-    
-    #While the trade is too large, cut trade size in half
-    while implied_shift > max_shift:
-        
-        #Cut trade in half
-        eth_delta = eth_delta/2
-        rai_delta = C / (eth_res + eth_delta) - rai_res
-        implied_shift = abs((rai_res + rai_delta)/ (eth_res + eth_delta) - rai_res / eth_res)
-
-    if action_key == "eth_sold":
-        I_t = s['ETH_balance']
-        O_t = s['RAI_balance']
-        I_t1 = s['ETH_balance']
-        O_t1 = s['RAI_balance']
-        delta_I = eth_delta
-        delta_O = rai_delta
-    else:
-        I_t = s['RAI_balance']
-        O_t = s['ETH_balance']
-        I_t1 = s['RAI_balance']
-        O_t1 = s['ETH_balance']
-        delta_I = rai_delta
-        delta_O = eth_delta
     return I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key
 
 def reverse_event(event):
