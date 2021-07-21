@@ -38,7 +38,7 @@ def agent_action(signal, s, params):
     C = rai_res * eth_res
     
     if params['agent_type'] == "Arb1":
-        eth_size = 20.0
+        eth_size = 10.0
         
         #Find the maximum shift that the trade should be able to sap up all arbitrage opportunities
         max_shift = abs(rai_res / eth_res - signal)
@@ -89,7 +89,7 @@ def agent_action(signal, s, params):
         amm_price = reserve_2 / reserve_1
         price_error = amm_price + signal
         optimal_value = (reserve_1 * signal - reserve_2) / price_error
-        eth_size = round(abs(optimal_value) * .2, 1)
+        eth_size = round(abs(optimal_value) * .1, 1)
         
         
         #Decide on sign of eth

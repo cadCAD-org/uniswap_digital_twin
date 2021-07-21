@@ -184,7 +184,7 @@ def extrapolation_cycle(base_path: str = None,
                         historical_lag: Days = 0,
                         price_samples: int = 10,
                         extrapolation_samples: int = 1,
-                        extrapolation_timesteps: int = 7 * 24,
+                        extrapolation_timesteps: int = 7 * 24 * 7,
                         use_last_data=False,
                         generate_reports=True) -> object:
     """
@@ -248,7 +248,6 @@ def extrapolation_cycle(base_path: str = None,
     
     print("3. Fitting Stochastic Processes\n---")
     #stochastic_params = stochastic_fit(backtesting_data.exogenous_data)
-    print("FILLING WITH DUMMY FUNCTION FOR NOW")
     stochastic_params = stochastic_fit(None)
     
     
@@ -257,7 +256,6 @@ def extrapolation_cycle(base_path: str = None,
     N_t = extrapolation_timesteps
     N_price_samples = price_samples
     
-    print("USING DUMMY INITIAL RATIO")
     #initial_price = backtest_results[0].iloc[-1].eth_price
     initial_ratio = 6.455903839554217
     
@@ -282,7 +280,13 @@ def extrapolation_cycle(base_path: str = None,
 
     print("Test Code for Arb Traders Convergence:")
     pd.DataFrame(extrapolated_signals[0]).plot(kind='line')
-    (extrapolation_df['RAI_balance']/extrapolation_df['ETH_balance']).plot(kind='line')
+    a = extrapolation_df[extrapolation_df['subset'] == 0].set_index('timestep')
+    b = extrapolation_df[extrapolation_df['subset'] == 1].set_index('timestep')
+    (a['RAI_balance']/a['ETH_balance']).plot(kind='line')
+    (b['RAI_balance']/b['ETH_balance']).plot(kind='line')
+    plt.legend(['True Ratio', 'Arb Trader 1', 'Arb Trader 2'])
+    plt.ylabel("Price Ratio")
+    plt.title("Extrapolated Results")
     plt.show()
     
     
