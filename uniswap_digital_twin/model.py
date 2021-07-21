@@ -12,7 +12,7 @@ genesis_states = {
     'RAI_balance': InitialValue(None, RAI),
     'ETH_balance': InitialValue(None, ETH),
     'Ratio': InitialValue(None, Percentage),
-    'Test': InitialValue(0, float)
+    'Action': InitialValue(None, dict)
 }
 
 initial_state = prepare_state(genesis_states)
@@ -38,22 +38,32 @@ parameters = {
 ## Model Logic
 
 def create_action(params, substep, _3, s):
+    t = s['timestep']
+    signal = params['extrapolated_signals'][t]['ratio']
+    I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = agent_action(signal, s)
     action = {
-        'I_t': 1,
-        'O_t': None,
-        'I_t1': None,
-        'O_t1': None,
-        'delta_I': None,
-        'delta_O': None,
-        'action_key': None
+        'I_t': I_t,
+        'O_t': O_t,
+        'I_t1': I_t1,
+        'O_t1': O_t1,
+        'delta_I': delta_I,
+        'delta_O': delta_O,
+        'action_key': action_key
     }
         
     return action
 
 
 def s_actionHub(_params, substep, sH, s, _input):
-    hold = _input['I_t']
-    return('Test', hold + s['Test'])
+    action = {
+        'I_t': _input['I_t'],
+        'O_t': _input['O_t'],
+        'I_t1': _input['I_t1'],
+        'O_t1': _input['O_t1'],
+        'delta_I': _input['delta_I'],
+        'delta_O': _input['delta_O'],
+        'action_key': _input['action_key']}
+    return('Action', action)
 
 
 def p_actionDecoder(params, substep, _3, s):
@@ -108,10 +118,9 @@ def p_actionDecoder(params, substep, _3, s):
         event = uniswap_events.iloc[t]['event']
         action['action_id'] = event
     else:
-        signal = params['extrapolated_signals'][t]['ratio']
-        
-        
-        I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = agent_action(signal, s)
+        #signal = params['extrapolated_signals'][t]['ratio']
+        #I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = agent_action(signal, s)
+        I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = s['Action']['I_t'], s['Action']['O_t'], s['Action']['I_t1'], s['Action']['O_t1'], s['Action']['delta_I'], s['Action']['delta_O'], s['Action']['action_key']
         if action_key == "eth_sold":
             event = 'tokenPurchase'
         else:
@@ -231,7 +240,7 @@ PSUBs = [
          }
      ,
     'variables':{
-        'Test': s_actionHub
+        'Action': s_actionHub
         }
         },
     {

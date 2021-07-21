@@ -136,7 +136,6 @@ def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_
                           assign_params=False)
     
     #Post processing
-    print(raw_sim_df)
     sim_df = default_model.post_processing(raw_sim_df)
     return sim_df
 
