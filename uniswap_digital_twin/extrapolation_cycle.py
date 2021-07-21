@@ -85,7 +85,7 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
     # Run cadCAD model
     raw_sim_df = easy_run(initial_state,
                           params,
-                          default_model.PSUBs,
+                          default_model.PSUBs[1:],
                           timesteps,
                           1,
                           drop_substeps=True,
@@ -136,6 +136,7 @@ def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_
                           assign_params=False)
     
     #Post processing
+    print(raw_sim_df)
     sim_df = default_model.post_processing(raw_sim_df)
     return sim_df
 
@@ -276,8 +277,8 @@ def extrapolation_cycle(base_path: str = None,
     print("5. Extrapolating Future Data\n---")
     N_extrapolation_samples = extrapolation_samples
     extrapolation_df = extrapolate_data(backtesting_data, extrapolated_signals[0], N_t, np.exp(initial_ratio)-1)
-    
-    
+    extrapolation_df = extrapolation_df.reset_index(drop=True)
+
     print("Test Code for Arb Traders Convergence:")
     pd.DataFrame(extrapolated_signals[0]).plot(kind='line')
     (extrapolation_df['RAI_balance']/extrapolation_df['ETH_balance']).plot(kind='line')

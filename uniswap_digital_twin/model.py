@@ -11,7 +11,8 @@ import numpy as np
 genesis_states = {
     'RAI_balance': InitialValue(None, RAI),
     'ETH_balance': InitialValue(None, ETH),
-    'Ratio': InitialValue(None, Percentage)
+    'Ratio': InitialValue(None, Percentage),
+    'Test': InitialValue(0, float)
 }
 
 initial_state = prepare_state(genesis_states)
@@ -35,6 +36,24 @@ parameters = {
 }
 
 ## Model Logic
+
+def create_action(params, substep, _3, s):
+    action = {
+        'I_t': 1,
+        'O_t': None,
+        'I_t1': None,
+        'O_t1': None,
+        'delta_I': None,
+        'delta_O': None,
+        'action_key': None
+    }
+        
+    return action
+
+
+def s_actionHub(_params, substep, sH, s, _input):
+    hold = _input['I_t']
+    return('Test', hold + s['Test'])
 
 
 def p_actionDecoder(params, substep, _3, s):
@@ -117,7 +136,7 @@ def p_actionDecoder(params, substep, _3, s):
                 action[action_key] = delta_I
             else:
                 action[action_key] = 0
-            action['price_ratio'] =  delta_O / calculated_delta_O
+            #action['price_ratio'] =  delta_O / calculated_delta_O
         # Arbitrary trader case
         else:            
             P = I_t1 / O_t1
@@ -205,8 +224,16 @@ def post_processing(raw):
     return raw[['RAI_balance', 'ETH_balance']]
 
 ## Model Structure
-
 PSUBs = [
+    {
+     'policies': {
+         'create_action': create_action
+         }
+     ,
+    'variables':{
+        'Test': s_actionHub
+        }
+        },
     {
         'policies': {
             'user_action': p_actionDecoder
