@@ -9,7 +9,7 @@ from enum import Enum
 import pandas as pd
 from Types import BacktestingData, Days, USD_per_ETH, ExogenousData
 from cadCAD_tools.execution import easy_run
-from cadCAD_tools.preparation import prepare_params, Param
+from cadCAD_tools.preparation import prepare_params, Param, ParamSweep
 from Data import create_data
 import matplotlib.pyplot as plt
 from stochastic import FitParams, generate_eth_samples, generate_ratio_samples
@@ -122,6 +122,8 @@ def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_
     params.update({'uniswap_events': Param(None, BacktestingData)})
     params.update({'extrapolated_signals': Param(extrapolated_signals, np.array)})
     params.update({'backtest_mode':Param(False, bool)})
+    params.update({'agent_type': ParamSweep(["Arb1", "Arb2"], str)})
+    
 
     params = prepare_params(params)
 
@@ -136,8 +138,8 @@ def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_
                           assign_params=False)
     
     #Post processing
-    sim_df = default_model.post_processing(raw_sim_df)
-    return sim_df
+    #sim_df = default_model.post_processing(raw_sim_df)
+    return raw_sim_df
 
 """def extrapolate_signals(signal_params: FitParams,
                         timesteps: int,

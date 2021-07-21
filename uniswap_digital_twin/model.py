@@ -1,5 +1,5 @@
 from cadCAD_tools.types import Parameter
-from cadCAD_tools.preparation import InitialState, Param
+from cadCAD_tools.preparation import InitialState, Param, ParamSweep
 from Types import ETH, RAI, BacktestingData, Percentage
 from cadCAD_tools.types import InitialValue
 from cadCAD_tools.preparation import prepare_state
@@ -32,7 +32,8 @@ parameters = {
     # Else, it will run on backtesting mode
     'uniswap_events': Param(None, BacktestingData),
     'backtest_mode': Param(True, bool),
-    'extrapolated_signals': Param(None, np.array)
+    'extrapolated_signals': Param(None, np.array),
+    'agent_type': ParamSweep([None], str)
 }
 
 ## Model Logic
@@ -40,7 +41,7 @@ parameters = {
 def create_action(params, substep, _3, s):
     t = s['timestep']
     signal = params['extrapolated_signals'][t]['ratio']
-    I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = agent_action(signal, s)
+    I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key = agent_action(signal, s, params)
     action = {
         'I_t': I_t,
         'O_t': O_t,

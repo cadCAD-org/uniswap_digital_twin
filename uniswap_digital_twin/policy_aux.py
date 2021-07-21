@@ -21,7 +21,7 @@ def get_parameters(uniswap_events, event, s, t):
     
     return I_t, O_t, I_t1, O_t1, delta_I, delta_O, action_key
 
-def agent_action(signal, s):
+def agent_action(signal, s, params):
     #Find current ratio
     current_ratio = s['RAI_balance'] / s['ETH_balance']
     eth_res = s['ETH_balance']
@@ -40,8 +40,13 @@ def agent_action(signal, s):
     #Find the maximum shift that the trade should be able to sap up all arbitrage opportunities
     max_shift = abs(rai_res / eth_res - signal)
     
-    #Start with a constant choice of 10 eth trade
-    eth_size = 10.0
+    #Start with a constant choice of eth trade
+    if params['agent_type'] == "Arb1":
+        eth_size = 10.0
+    elif params['agent_type'] == "Arb2":
+        eth_size = 100.0
+    else:
+        assert False
     
     #Decide on sign of eth
     if action_key == "eth_sold":
