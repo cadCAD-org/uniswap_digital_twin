@@ -104,7 +104,7 @@ def backtest_model(historical_events_data: BacktestingData) -> pd.DataFrame:
 
 
 
-def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_ratio)  -> pd.DataFrame:
+def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_ratio, bt)  -> pd.DataFrame:
     # HACK
     import model as default_model
 
@@ -112,8 +112,8 @@ def extrapolate_data(backtesting_data, extrapolated_signals, timesteps, initial_
     initial_state = default_model.initial_state
     
     
-    initial_state.update({'RAI_balance': backtesting_data["token_balance"].iloc[-1]})
-    initial_state.update({'ETH_balance': backtesting_data["eth_balance"].iloc[-1]})
+    initial_state.update({'RAI_balance': bt["RAI_balance"].iloc[-1]})
+    initial_state.update({'ETH_balance': bt["ETH_balance"].iloc[-1]})
     
     
 
@@ -259,8 +259,6 @@ def extrapolation_cycle(base_path: str = None,
     #initial_price = backtest_results[0].iloc[-1].eth_price
     initial_ratio = 6.455903839554217
     
-    
-    
     #extrapolated_signals = extrapolate_signals(stochastic_params,
     #                                           N_t + 10,
     #                                           initial_price,
@@ -271,12 +269,15 @@ def extrapolation_cycle(base_path: str = None,
                                                initial_ratio,
                                                N_price_samples)
 
+    pd.DataFrame(extrapolated_signals[0]).to_csv(data_path / f'{runtime}-signal.csv.gz',
+                               compression='gzip')
 
     
     print("5. Extrapolating Future Data\n---")
     N_extrapolation_samples = extrapolation_samples
-    extrapolation_df = extrapolate_data(backtesting_data, extrapolated_signals[0], N_t, np.exp(initial_ratio)-1)
+    extrapolation_df = extrapolate_data(backtesting_data, extrapolated_signals[0], N_t, np.exp(initial_ratio)-1, backtest_results[0])
     extrapolation_df = extrapolation_df.reset_index(drop=True)
+    
 
     print("Test Code for Arb Traders Convergence:")
     pd.DataFrame(extrapolated_signals[0]).plot(kind='line')
