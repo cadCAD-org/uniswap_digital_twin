@@ -1,0 +1,10 @@
+cadCAD_tools
+pathlib
+typing
+matplotlib
+numpy
+papermill
+json
+tqdm
+pandas
+requests
