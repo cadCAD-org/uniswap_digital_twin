@@ -22,7 +22,7 @@ def retrieve_data(output_path: str,
     """
     Download data and store it to a *.csv.xz file.
     """
-    df = create_data()
+    df = create_data(start_date=date_range[0], end_date=date_range[1])
     df.to_csv(output_path, compression='gzip')
 
 
@@ -181,7 +181,7 @@ def extrapolate_signals(signal_params: FitParams,
 
 def extrapolation_cycle(base_path: str = None,
                         historical_interval: Days = 28,
-                        historical_lag: Days = 0,
+                        historical_lag: Days = 1,
                         price_samples: int = 10,
                         extrapolation_samples: int = 1,
                         extrapolation_timesteps: int = 7 * 24 * 7,
