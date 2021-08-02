@@ -84,24 +84,15 @@ def query_builder(main, fields,
     }}""".format(main, main_clauses, fields)
     return query
 
-def pull_data(query_function, field):
+def pull_data(query_function):
     """
-    Function to pull 6000 rows of data
+    Function to pull query data then process
     """
     
-    #Iterate over the chunks
-    data = []
-    for i in tqdm(range(0, 6000, 1000)):
-        #Build query
-        query = query_function(i)
-        
-        #Extract data
-        data.extend(process_query(query, field, graph_url))
-        
-    #Convert to dataframe
-    data = pd.DataFrame(data)
+    #Pull the data
+    data = query_function.run_queries()
     data['timestamp'] = pd.to_datetime(data['timestamp'], unit = 's')
-    data['event'] = field
+    data['event'] = query_function.data_field
     
     #Create mapping of column data types
     cdt = {}
@@ -154,6 +145,9 @@ def process_data(data, lim_date=False):
     
     #Concat
     data = pd.concat(data)
+    
+    #Drop the id column
+    data = data.drop(columns=['id'])
     
     #Rename columns
     data = data.rename(columns={'amount0': 'token_delta', 'amount1': 'eth_delta', 'liquidity': 'UNI_delta'})
@@ -314,27 +308,29 @@ class PaginatedQuery:
             #Append the data
             output.append(data)
 
-def create_data():
+def create_data(start_date=None, end_date=None):
     #Build queries for mint, burn, swap
-    mint_query = lambda i: query_builder("mints",
-                      ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
-                     first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                             where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"})
+    mint_query = PaginatedQuery("mints",
+                            ["id","timestamp", "amount0", "amount1", "logIndex", "liquidity"], "mints",
+                     first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
+                           start_date = start_date,
+                           end_date = end_date)
     
-    burns_query = lambda i: query_builder("burns",
-                      ["timestamp", "amount0", "amount1", "logIndex", "liquidity"],
-                     first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                             where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"})
+    burns_query = PaginatedQuery("burns",
+                            ["id", "timestamp", "amount0", "amount1", "logIndex", "liquidity"], "burns",
+                     first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
+                           start_date = start_date,
+                           end_date = end_date)
     
-    swaps_query = lambda i: query_builder("swaps",
-                      ["timestamp", "amount0In", "amount1In", "amount0Out", "amount1Out","logIndex"],
-                     first=1000, skip=i, order_by="timestamp", order_direction="desc",
-                             where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"})
+    swaps_query = PaginatedQuery("swaps",
+                            ["id","timestamp", "amount0In", "amount1In", "amount0Out", "amount1Out","logIndex"], "swaps",
+                     first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
+                           start_date = start_date,
+                           end_date = end_date)
     
     #Pull and process data
     queries = [mint_query, burns_query, swaps_query]
-    fields = ["mints", "burns", "swaps"]
-    data = [pull_data(q, f) for q, f in zip(queries, fields)]
+    data = [pull_data(q) for q in queries]
     data = process_data(data, lim_date=True)
     
     #Add in starting state
