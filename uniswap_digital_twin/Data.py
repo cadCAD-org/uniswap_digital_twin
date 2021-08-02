@@ -232,6 +232,88 @@ def add_starting_state(data):
     
     return data
 
+def convert_to_unix(dt):
+    return int((dt - datetime(1970,1,1)).total_seconds() )
+
+class PaginatedQuery:
+    """
+    A class which handles a paginated query. Attributes of the base query are specified
+    and then given the latest ID, there is an update to the query. The sorting must be
+    done on the ID to ensure no data is missed.
+    """
+    
+    def __init__(self, main, fields, data_field,
+                  where_clause=None, first=None, start_date=None, end_date=None):
+        """
+        main (str): The main query that is being run
+        fields (list[str]): A list of strings representing each field we want to pull
+        data_field (str): The data field to pull out of the json
+        where_clause (dict): A dictionary of clauses for filtering with the where statement
+        first (int): Number of records to grab (maximum 1000)
+        start_date (datetime): The start date of the data
+        end_date (datetime): The end date of the data
+        """
+        
+        assert first <= 1000, "The argument for first must be less than or equal to 1000"
+        
+        self.main = main
+        self.fields = fields
+        self.data_field = data_field
+        if where_clause is None:
+            where_clause = {}
+        self.where_clause = where_clause
+        self.first = first
+        
+        self.start_date = start_date
+        self.end_date = end_date
+        
+        if self.start_date:
+            start_date_unix = convert_to_unix(start_date)
+            self.where_clause['timestamp_gte'] = start_date_unix
+        if self.end_date:
+            end_date_unix = convert_to_unix(end_date+pd.Timedelta("1D")) - 1
+            self.where_clause['timestamp_lte'] = end_date_unix
+                
+    def run_queries(self):
+        #For tracking the data
+        output = []
+        
+        #For tracking the last minimum index
+        last_min_index = None
+        
+        #Copy the where clause
+        where_clause = self.where_clause.copy()
+            
+        while True:
+            #Add in the minimum index
+            if last_min_index:
+                where_clause['id_lt'] = last_min_index
+            
+            #Build the query
+            query = query_builder(self.main, self.fields,
+                         first=self.first, order_by="id", order_direction="desc",
+                                 where_clause=where_clause)
+            
+            #Pull the data
+            data = process_query(query, self.data_field, graph_url)
+
+            #Convert to a pandas dataframe
+            data = pd.DataFrame(data)
+
+            #If length of data is 0 return
+            if len(data) == 0:
+                #If no output return none, otherwise concat
+                if len(output) == 0:
+                    return None
+                else:
+                    return pd.concat(output)
+
+            #Get the latest minimum index
+            last_min_index = data['id'].min()
+
+            #Append the data
+            output.append(data)
+
 def create_data():
     #Build queries for mint, burn, swap
     mint_query = lambda i: query_builder("mints",
@@ -258,3 +340,5 @@ def create_data():
     #Add in starting state
     data = add_starting_state(data)
     return data
+
+
