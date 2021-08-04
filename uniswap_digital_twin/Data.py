@@ -4,6 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 from datetime import datetime
+from typing import List
 
 ######Global Params#######
 graph_url = 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2'
@@ -12,7 +13,9 @@ col_data_types = {'amount0': float, 'amount1': float, 'logIndex': int, 'liquidit
                   'amount0In': float, 'amount0Out': float, 'amount1In': float, 'amount1Out': float}
 #########################
 
-def process_query(query, data_field, graph_url):
+
+
+def process_query(query: str, data_field: str, graph_url: str) -> List[dict]:
     """
     Helper function to take a query and retrieve the data.
     query (str): The query to be executed
