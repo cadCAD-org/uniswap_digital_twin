@@ -34,7 +34,21 @@ def process_query(query: str, data_field: str, graph_url: str) -> List[dict]:
     
     return data
 
-def convert_where_clause(clause):
+def convert_where_clause(clause: dict) -> str:
+    """
+    Convert a dictionary of clauses to a string for use in a query
+
+    Parameters
+    ----------
+    clause : dict
+        Dictionary of clauses
+
+    Returns
+    -------
+    str
+        A string representation of the clauses
+
+    """
     out = "{"
     for key in clause.keys():
         out += "{}: ".format(key)
@@ -43,48 +57,69 @@ def convert_where_clause(clause):
     out += "}"
     return out
 
-def query_builder(main, fields,
-                  where_clause=None, first=None, skip=None,
-                 order_by=None, order_direction=None):
+def query_builder(main: str, fields: List[str], first: int = 100,
+                  skip: int = None, order_by: str = None,
+                  order_direction: str = None,
+                 where_clause: dict = None) -> str:
     """
-    main (str): The main query that is being run
-    fields (list[str]): A list of strings representing each field we want to pull
-    where_clause (dict): A dictionary of clauses for filtering with the where statement
-    first (int): Number of records to grab (maximum 1000)
-    skip (int): Number of records to skip (maximum 5000)
-    order_by (str): Field to order by
-    order_direction (str): The direction of ordering for the field
+    Function for creation of a query string.
+
+    Parameters
+    ----------
+    main : str
+        The query to be run
+    fields : List[str]
+        The fields to pull in the query
+    first : int, optional
+        The number of records to pull
+    skip : int, optional
+        The number of records to skip
+    order_by : str, optional
+        The field to order by
+    order_direction : str, optional
+        The direction to order by
+    where_clause : dict, optional
+        A dictionary of clauses for filtering of the records
+
+    Returns
+    -------
+    str
+        DESCRIPTION.
+
     """
-    #Convert the where clause
-    where_clause = convert_where_clause(where_clause)
-    
-    #Clauses for the main function
-    main_clauses = []
-    if first:
-        main_clauses.append("first: {}".format(first))
+
+    #Assert the correct values for first and skip are used
+    assert first >= 1 and first <= 1000, "The value for first must be within 1-1000"
     if skip:
-        main_clauses.append("skip: {}".format(skip))
-    if order_by:
-        main_clauses.append("orderBy: {}".format(order_by))
-    if order_direction:
-        main_clauses.append("orderDirection: {}".format(order_direction))
-    if where_clause:
-        main_clauses.append("where: {}".format(where_clause))
+        assert skip >= 0 and skip <= 5000, "The value for skip must be within 1-5000"
     
-    #Convert clauses to a string
-    main_clauses = ", ".join(main_clauses)
+    #List of main parameters
+    main_params = []
+    main_params.append("first: {}".format(first))
+    if skip:
+        main_params.append("skip: {}".format(skip))
+    if order_by:
+        main_params.append("orderBy: {}".format(order_by))
+    if order_direction:
+        main_params.append("orderDirection: {}".format(order_direction))
+    if where_clause:
+        #Convert where clause
+        where_clause = convert_where_clause(where_clause)
+        main_params.append("where: {}".format(where_clause))
+        
+    #Convert params to a string
+    main_params = ", ".join(main_params)
     
     #Convert fields to a string
     fields = ", ".join(fields)
     
-    
-
-
+    #Add in all the components
     query = """query{{
     {}({}){{
     {}
     }}
-    }}""".format(main, main_clauses, fields)
+    }}""".format(main, main_params, fields)
+    
     return query
 
 def pull_data(query_function):
