@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 from datetime import datetime
 from typing import List
+from pandas import DataFrame
 
 ######Global Params#######
 graph_url = 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2'
@@ -84,7 +85,7 @@ def query_builder(main: str, fields: List[str], first: int = 100,
     Returns
     -------
     str
-        DESCRIPTION.
+        A query string constructed from all the parameters.
 
     """
 
@@ -274,31 +275,47 @@ class PaginatedQuery:
     done on the ID to ensure no data is missed.
     """
     
-    def __init__(self, main, fields, data_field,
-                  where_clause=None, first=None, start_date=None, end_date=None):
-        """
-        main (str): The main query that is being run
-        fields (list[str]): A list of strings representing each field we want to pull
-        data_field (str): The data field to pull out of the json
-        where_clause (dict): A dictionary of clauses for filtering with the where statement
-        first (int): Number of records to grab (maximum 1000)
-        start_date (datetime): The start date of the data
-        end_date (datetime): The end date of the data
+    def __init__(self, main: str, fields: List[str], data_field: str,
+                  where_clause: dict = None, first: int = None,
+                  start_date: datetime = None, end_date: datetime = None) -> None:
         """
         
-        assert first <= 1000, "The argument for first must be less than or equal to 1000"
-        
+
+        Parameters
+        ----------
+        main : str
+            The main query that is being run.
+        fields : List[str]
+            A list of strings representing each field we want to pull.
+        data_field : str
+            The data field to pull out of the json
+        where_clause : dict, optional
+            A dictionary of clauses for filtering with the where statement
+        first : int, optional
+            Number of records to grab (maximum 1000)
+        start_date : datetime, optional
+            The start date of the data
+        end_date : datetime, optional
+            The end date of the data
+
+        Returns
+        -------
+        None
+
+        """
+                
         self.main = main
         self.fields = fields
         self.data_field = data_field
+        #If there is no where clause, convert it to an empty dictionary
         if where_clause is None:
             where_clause = {}
         self.where_clause = where_clause
         self.first = first
-        
         self.start_date = start_date
         self.end_date = end_date
         
+        #Convert the dates to unix and add them to the where clause
         if self.start_date:
             start_date_unix = convert_to_unix(start_date)
             self.where_clause['timestamp_gte'] = start_date_unix
@@ -306,7 +323,17 @@ class PaginatedQuery:
             end_date_unix = convert_to_unix(end_date+pd.Timedelta("1D")) - 1
             self.where_clause['timestamp_lte'] = end_date_unix
                 
-    def run_queries(self):
+    def run_queries(self) -> DataFrame:
+        """
+        
+
+        Returns
+        -------
+        DataFrame
+            Returns a pandas dataframe filled with the data from queries
+
+        """
+        
         #For tracking the data
         output = []
         
