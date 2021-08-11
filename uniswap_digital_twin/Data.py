@@ -265,7 +265,21 @@ def add_starting_state(data):
     
     return data
 
-def convert_to_unix(dt):
+def convert_to_unix(dt: datetime) -> int:
+    """
+    Convert a datetime to a unix number
+
+    Parameters
+    ----------
+    dt : datetime
+        The datetime to convert
+
+    Returns
+    -------
+    int
+        An integer representing the datetime in unix
+
+    """
     return int((dt - datetime(1970,1,1)).total_seconds() )
 
 class PaginatedQuery:
