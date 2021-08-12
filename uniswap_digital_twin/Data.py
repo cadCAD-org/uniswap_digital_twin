@@ -123,9 +123,20 @@ def query_builder(main: str, fields: List[str], first: int = 100,
     
     return query
 
-def pull_data(query_function):
+def pull_data(query_function: PaginatedQuery) -> DataFrame:
     """
     Function to pull query data then process
+
+    Parameters
+    ----------
+    query_function : PaginatedQuery
+        The paginated query object that retrieves our data
+
+    Returns
+    -------
+    DataFrame
+        A dataframe with the data pulled from our query
+
     """
     
     #Pull the data
@@ -135,7 +146,9 @@ def pull_data(query_function):
     
     #Create mapping of column data types
     cdt = {}
+    #Check each column
     for col in data.columns:
+        #If it has a mapping add it to cdt
         if col in col_data_types.keys():
             cdt[col] = col_data_types[col]
             
