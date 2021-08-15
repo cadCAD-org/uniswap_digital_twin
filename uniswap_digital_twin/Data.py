@@ -53,7 +53,11 @@ def convert_where_clause(clause: dict) -> str:
     out = "{"
     for key in clause.keys():
         out += "{}: ".format(key)
-        out += '"{}"'.format(clause[key])
+        #If the type of the right hand side is string add the string quotes around it
+        if type(clause[key]) == str:
+            out += '"{}"'.format(clause[key])
+        else:
+            out += "{}".format(clause[key])
         out += ","
     out += "}"
     return out
@@ -165,18 +169,60 @@ def find_data_overlap(data):
     """
     return max([df['timestamp'].min() for df in data])
 
-def process_amount(df):
+def process_amount(df: DataFrame) -> None:
+    """
+    Modifies the dataframe in place to map values to amount0,
+    amount1 and liquidity with the current sign. This function
+    requires the dataframe to all be of the same event
+
+    Parameters
+    ----------
+    df : DataFrame
+        A dataframe of data for either mints, burns or swaps
+
+    Returns
+    -------
+    None
+
+    """
+    
+    #Ensure there is only one event
+    assert len(set(df['event'].values)), "Dataframe has more than one event"
+    
     if df['event'].iloc[0] == 'mints':
+        #Mints are already correctly formated
         pass
     elif df['event'].iloc[0] == 'burns':
+        #Flip the sign to negative for burns
         df[['amount0', 'amount1', 'liquidity']] *= -1
     elif df['event'].iloc[0] == 'swaps':
+        #Map the amount in for each token minus amount out to be the column for
+        #amount0 and amount1, no liquidity for swaps
         df['amount0'] = df['amount0In'] - df['amount0Out']
         df['amount1'] = df['amount1In'] - df['amount1Out']
         df['liquidity'] = 0
         df.drop(columns=['amount0Out', 'amount0In', 'amount1Out', 'amount1In'], inplace=True)
+    else:
+        assert False, "The event is not recognized"
         
-def process_events(df):
+def process_events(df: DataFrame) -> None:
+    """
+    Modifies the dataframe in place to map values for the events
+
+    Parameters
+    ----------
+    df : DataFrame
+        A dataframe of data for either mints, burns or swaps
+
+    Returns
+    -------
+    None
+
+    """
+    
+    #Ensure there is only one event
+    assert len(set(df['event'].values)), "Dataframe has more than one event"
+    
     if df['event'].iloc[0] == 'mints':
         df['event'] = 'mint'
     elif df['event'].iloc[0] == 'burns':
@@ -184,16 +230,26 @@ def process_events(df):
     elif df['event'].iloc[0] == 'swaps':
         df['event'] = (df['amount0'] > 0).map({True: 'ethPurchase', False: 'tokenPurchase'})
 
-def process_data(data, lim_date=False):
+def process_data(data: DataFrame) -> DataFrame:
+    """
+    Process of all the data
+
+    Parameters
+    ----------
+    data : DataFrame
+        A dataframe of data
+
+    Returns
+    -------
+    DataFrame
+        A dataframe of processed data
+
+    """
+    
     #Do all data processing
     for df in data:
         process_amount(df)
         process_events(df)
-    
-    #Consider only overlapping data
-    if lim_date:
-        overlap_date = find_data_overlap(data)
-        data = [df[df['timestamp'] >= overlap_date] for df in data]
     
     #Concat
     data = pd.concat(data)
@@ -207,10 +263,6 @@ def process_data(data, lim_date=False):
     #Indexing
     data = data.sort_values(['timestamp', 'logIndex'])
     data.reset_index(inplace = True, drop = True)
-    
-    #Find balances over time
-    for col1, col2 in zip(['token_balance', 'eth_balance', 'UNI_supply'], ['token_delta', 'eth_delta', 'UNI_delta']):
-        data[col1] = data[col2].cumsum()
     
     return data
 
@@ -423,7 +475,7 @@ def create_data(start_date=None, end_date=None):
     #Pull and process data
     queries = [mint_query, burns_query, swaps_query]
     data = [pull_data(q) for q in queries]
-    data = process_data(data, lim_date=True)
+    data = process_data(data)
     
     #Add in starting state
     data = add_starting_state(data)
