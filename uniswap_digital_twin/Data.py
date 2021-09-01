@@ -266,67 +266,94 @@ def process_data(data: DataFrame) -> DataFrame:
     
     return data
 
-def add_starting_state(data):
-    #Find the minimum date
-    start_date = data['timestamp'].min()
-
-    #Truncate to hour
-    start_date = datetime(start_date.year, start_date.month, start_date.day, start_date.hour)
+def add_starting_state(data: DataFrame, start_date: datetime,
+                      end_date: datetime) -> DataFrame:
+    #Convert the dates to unix and capture all the times within the end date by adding one day and subtracting 1 (unix)
+    #For the start date subtract one hour since each hour corresponds to the end of the hour
+    start_date_unix = convert_to_unix(start_date-pd.Timedelta("1h"))
+    end_date_unix = convert_to_unix(end_date+pd.Timedelta("1D"))-1
     
-    #Convert to unix timestamp
-    unix_ts = int((start_date - datetime(1970,1,1)).total_seconds() )
+    #Create the query object
+    state_query = PaginatedQuery("pairHourDatas",
+                                ["id",
+                                    "reserve0",
+            "reserve1",
+            "hourStartUnix"], "pairHourDatas",
+                         first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1",
+                                                  "hourStartUnix_gte": start_date_unix,
+                                                  "hourStartUnix_lte": end_date_unix})
+
+    #Pull the data
+    state_data = state_query.run_queries()
     
-    #Add an hour ahead to reflect that data is end of the hour marked
-    start_date = start_date + pd.Timedelta("1h")
+    #Convert the type
+    state_data['reserve0'] = state_data['reserve0'].astype(float)
+    state_data['reserve1'] = state_data['reserve1'].astype(float)
 
-    #Clip out anything before the start date
-    data = data[data['timestamp'] >= start_date].copy()
+    #Find the liquidity
+    state_data['liquidity'] = (state_data['reserve0'] * state_data['reserve1']) ** 0.5
+
+    #Convert the timestamp
+    state_data['timestamp'] = pd.to_datetime(state_data['hourStartUnix'], unit = 's')
+
+    #Drop extra columns
+    state_data = state_data.drop(columns=['id', 'hourStartUnix'])
+
+    #Sort the data
+    state_data = state_data.sort_values(by='timestamp')
     
+    #Convert the dates to unix and capture all the times within the end date by adding one day and subtracting 1 (unix)
+    #For the start date subtract one hour since each hour corresponds to the end of the hour
+    start_date_unix = convert_to_unix(start_date)
+    end_date_unix = convert_to_unix(end_date+pd.Timedelta("1D"))-1
 
-    #Build query
-    query = """query{{
-      pairHourDatas (where: {{pair: "0x8ae720a71622e824f576b4a8c03031066548a3b1", hourStartUnix: {} }}){{
-        reserve0,
-        reserve1,
-        hourStartUnix
-      }}
-    }}
-    """.format(unix_ts)
+    state_query2 = PaginatedQuery("liquidityPositionSnapshots",
+                                ["id", "liquidityTokenTotalSupply", "timestamp"], "liquidityPositionSnapshots",
+                         first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1",
+                                                  "timestamp_gte": start_date_unix,
+                                                  "timestamp_lte": end_date_unix})
 
-    #Pull the starting state
-    start_state = process_query(query, "pairHourDatas", graph_url)
+    #Pull the data
+    state_data2 = state_query2.run_queries()
 
-    #Check to make sure only one has been pulled down and it equals the unix_ts
-    assert len(start_state) == 1, "Start state length not equal to 1"
-    start_state = start_state[0]
-    assert start_state['hourStartUnix'] == unix_ts, "The timestamps do not match"
+    #Convert the timestamp
+    state_data2['timestamp'] = pd.to_datetime(state_data2['timestamp'], unit = 's')
+    state_data2 = state_data2.sort_values(by='timestamp')
 
-    #Convert and find liquidity
-    start_state['reserve0'] = float(start_state['reserve0'])
-    start_state['reserve1'] = float(start_state['reserve1'])
-    start_state['liquidity'] = (start_state['reserve0'] * start_state['reserve1']) ** 0.5
+    #Drop extra columns
+    state_data2 = state_data2.drop(columns=['id'])
 
-    #Convert start state to correct format
-    start_state = {'token_delta': start_state['reserve0'],
-     'eth_delta': start_state['reserve1'],
-     'UNI_delta': start_state['liquidity'],
-     'logIndex': np.NaN,
-     'timestamp': start_date,
-     'event': np.NaN,
-     'token_balance': start_state['reserve0'],
-     'eth_balance': start_state['reserve1'],
-     'UNI_supply': start_state['liquidity']}
-
-    #Append start state
-    data = data.append(start_state, ignore_index=True)
-
-    #Sort and reset index
-    data = data.sort_values(['timestamp', 'logIndex'])
-    data = data.reset_index(drop=True)
+    #Convert the liquidityTokenTotalSupply to numeric
+    state_data2["liquidityTokenTotalSupply"] = state_data2["liquidityTokenTotalSupply"].astype(float)
     
-    #Find balances over time
-    for col1, col2 in zip(['token_balance', 'eth_balance', 'UNI_supply'], ['token_delta', 'eth_delta', 'UNI_delta']):
-        data[col1] = data[col2].cumsum()
+    #Get the historical token and eth balanace
+    data['token_balance'] = data['token_delta'].cumsum() + state_data['reserve0'].iloc[0]
+    data['eth_balance'] = data['eth_delta'].cumsum() + state_data['reserve1'].iloc[0]
+    
+    #Compute the liquidity
+    data['liquidity'] = (data['token_balance'] * data['eth_balance']) ** .5
+    
+    #Get the last hourly value for the balances
+    validation_data1 = data.groupby(data['timestamp'].dt.floor('h')).last()[['token_balance', 'eth_balance', 'liquidity']]
+    
+    #Ensure datetime
+    validation_data1.index = pd.to_datetime(validation_data1.index)
+    
+    #Get the other validation dataset
+    validation_data2 = state_data.set_index('timestamp').copy()[['reserve0','reserve1', 'liquidity']]
+    validation_data2.columns = ["token_balance", "eth_balance", 'liquidity']
+    validation_data2.index = pd.to_datetime(validation_data2.index)
+    
+    assert abs(validation_data2-validation_data1).max().max() < .01
+    
+    #Filter to only mints and burns
+    mints_burns = data[data['event'].isin(['mint', 'burn'])]
+    
+    #Find the starting UNI supply
+    starting_UNI = state_data2['liquidityTokenTotalSupply'].iloc[0] - mints_burns["UNI_delta"].iloc[0]
+    
+    #Find the starting supply of UNI
+    data['UNI_supply'] = data['UNI_delta'].cumsum() + starting_UNI
     
     return data
 
@@ -478,7 +505,7 @@ def create_data(start_date=None, end_date=None):
     data = process_data(data)
     
     #Add in starting state
-    data = add_starting_state(data)
+    data = add_starting_state(data, start_date, end_date)
     return data
 
 
