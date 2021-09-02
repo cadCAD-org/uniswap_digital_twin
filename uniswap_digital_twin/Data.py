@@ -268,6 +268,24 @@ def process_data(data: DataFrame) -> DataFrame:
 
 def add_starting_state(data: DataFrame, start_date: datetime,
                       end_date: datetime) -> DataFrame:
+    """
+    Add the starting state data to the current data
+
+    Parameters
+    ----------
+    data : DataFrame
+        The current dataset of transactions
+    start_date : datetime
+        The start date
+    end_date : datetime
+        The end date
+
+    Returns
+    -------
+    DataFrame
+        A dataframe with the new state variables added in
+
+    """
     #Convert the dates to unix and capture all the times within the end date by adding one day and subtracting 1 (unix)
     #For the start date subtract one hour since each hour corresponds to the end of the hour
     start_date_unix = convert_to_unix(start_date-pd.Timedelta("1h"))
@@ -479,33 +497,51 @@ class PaginatedQuery:
             #Append the data
             output.append(data)
 
-def create_data(start_date=None, end_date=None):
+def create_data(start_date: datetime,
+                      end_date: datetime) -> DataFrame:
+    """
+    A function for pulling and processing the uniswap data
+
+    Parameters
+    ----------
+    start_date : datetime, optional
+        The start date of the data
+    end_date : datetime, optional
+        The end date of the data
+
+    Returns
+    -------
+    DataFrame
+        A dataframe with the uniswap data
+
+    """
     #Build queries for mint, burn, swap
     mint_query = PaginatedQuery("mints",
-                            ["id","timestamp", "amount0", "amount1", "logIndex", "liquidity"], "mints",
-                     first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
-                           start_date = start_date,
-                           end_date = end_date)
-    
+                                ["id","timestamp", "amount0", "amount1", "logIndex", "liquidity"], "mints",
+                         first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
+                               start_date = start_date,
+                               end_date = end_date)
+        
     burns_query = PaginatedQuery("burns",
-                            ["id", "timestamp", "amount0", "amount1", "logIndex", "liquidity"], "burns",
-                     first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
-                           start_date = start_date,
-                           end_date = end_date)
-    
+                                ["id", "timestamp", "amount0", "amount1", "logIndex", "liquidity"], "burns",
+                         first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
+                               start_date = start_date,
+                               end_date = end_date)
+        
     swaps_query = PaginatedQuery("swaps",
-                            ["id","timestamp", "amount0In", "amount1In", "amount0Out", "amount1Out","logIndex"], "swaps",
-                     first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
-                           start_date = start_date,
-                           end_date = end_date)
-    
-    #Pull and process data
+                                ["id","timestamp", "amount0In", "amount1In", "amount0Out", "amount1Out","logIndex"], "swaps",
+                         first=1000, where_clause={"pair": "0x8ae720a71622e824f576b4a8c03031066548a3b1"},
+                               start_date = start_date,
+                               end_date = end_date)
+        
+    #Pull the data
     queries = [mint_query, burns_query, swaps_query]
     data = [pull_data(q) for q in queries]
     data = process_data(data)
     
     #Add in starting state
     data = add_starting_state(data, start_date, end_date)
+    
     return data
 
 
